@@ -68,11 +68,20 @@ class DatabaseService {
                 headers: this.getHeaders(),
                 body: JSON.stringify(note)
             });
-            if (res.ok) return await res.json();
-        } catch(e) { console.error(e); }
+            if (res.ok) {
+                const savedNote = await res.json();
+                console.log('✅ Note saved to MongoDB');
+                return savedNote;
+            } else {
+                console.error('Backend save failed, status:', res.status);
+            }
+        } catch(e) { 
+            console.error('Backend error, using fallback:', e);
+        }
     }
 
-    // Fallback
+    // Fallback to localStorage
+    console.log('💾 Saving to localStorage');
     await this.simulateLatency(500);
     const notes = this.getFromStorage<GeneratedNote>(STORAGE_KEYS.NOTES);
     const newNote = { ...note, _id: crypto.randomUUID(), createdAt: new Date().toISOString() };
@@ -109,11 +118,21 @@ class DatabaseService {
     if (this.useBackend) {
         try {
             const res = await fetch(`${BACKEND_URL}/articles`, { headers: this.getHeaders() });
-            if (res.ok) return await res.json();
-        } catch(e) { console.error(e); }
+            if (res.ok) {
+                const articles = await res.json();
+                console.log('✅ Fetched articles from MongoDB:', articles.length);
+                return articles;
+            } else {
+                console.error('Backend fetch failed, status:', res.status);
+            }
+        } catch(e) { 
+            console.error('Backend error, using fallback:', e);
+        }
     }
 
-    return this.getFromStorage<NewsArticle>(STORAGE_KEYS.ARTICLES);
+    const localArticles = this.getFromStorage<NewsArticle>(STORAGE_KEYS.ARTICLES);
+    console.log('💾 Using localStorage articles:', localArticles.length);
+    return localArticles;
   }
 
   async saveArticle(article: NewsArticle): Promise<void> {
