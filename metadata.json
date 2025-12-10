@@ -1,0 +1,5 @@
+{
+  "name": "Civil Services AI - UPSC News & Notes",
+  "description": "An intelligent automated current affairs generator for UPSC aspirants. Aggregates news via AI search, generates GS-wise notes, MCQs, and mains answers.",
+  "requestFramePermissions": []
+}
