@@ -1,6 +1,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Layout } from './components/Layout';
+import { AIAssistant } from './components/AIAssistant';
 import { Dashboard } from './pages/Dashboard';
 import { NewsScraper } from './pages/NewsScraper';
 import { SavedNotes } from './pages/SavedNotes';
@@ -15,6 +16,7 @@ const ProtectedRoute = () => {
 function App() {
   return (
     <HashRouter>
+      <AIAssistant />
       <Routes>
         <Route path="/login" element={<Login />} />
         
