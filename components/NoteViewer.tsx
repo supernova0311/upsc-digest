@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { GeneratedNote } from '../types';
 import ReactMarkdown from 'react-markdown';
-import { CheckCircle, Book, HelpCircle, Save, Trash2, X, Download } from 'lucide-react';
+import { CheckCircle, Book, HelpCircle, Save, Trash2, X, Download, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface Props {
   note: GeneratedNote;
@@ -12,8 +14,10 @@ interface Props {
 }
 
 export const NoteViewer: React.FC<Props> = ({ note, onSave, onClose, onDelete, saved }) => {
-  
-  const handleDownload = () => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadMarkdown = () => {
     const element = document.createElement("a");
     const file = new Blob([
       `# ${note.title}\n\n` +
@@ -21,15 +25,123 @@ export const NoteViewer: React.FC<Props> = ({ note, onSave, onClose, onDelete, s
       `**Date:** ${new Date().toLocaleDateString()}\n\n` +
       `## Summary\n${note.summary}\n\n` +
       `## Detailed Notes\n${note.content}\n\n` +
-      `## Mains Question\n${note.mainsQuestion?.question}\n\n` +
-      `### Model Points\n${note.mainsQuestion?.modelAnswerPoints.map(p => `- ${p}`).join('\n')}`
+      (note.mainsQuestion ? `## Mains Question\n${note.mainsQuestion?.question}\n\n### Model Points\n${note.mainsQuestion?.modelAnswerPoints.map(p => `- ${p}`).join('\n')}\n\n` : '') +
+      (note.mcqs.length > 0 ? `## MCQs\n${note.mcqs.map((mcq, i) => `\n### Q${i + 1}. ${mcq.question}\n${mcq.options.map((opt, j) => `${String.fromCharCode(65 + j)}. ${opt}`).join('\n')}\n**Answer:** ${String.fromCharCode(65 + mcq.correctOption)}\n**Explanation:** ${mcq.explanation}`).join('\n')}` : '')
     ], {type: 'text/markdown'});
     
     element.href = URL.createObjectURL(file);
     element.download = `${note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-    document.body.appendChild(element); // Required for this to work in FireFox
+    document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+  };
+
+  const handleDownloadPDF = async () => {
+    setDownloading(true);
+    try {
+      if (!contentRef.current) return;
+      
+      // Create a temporary container for PDF content
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '210mm'; // A4 width
+      tempDiv.style.backgroundColor = 'white';
+      tempDiv.style.padding = '20px';
+      tempDiv.style.fontFamily = 'Arial, sans-serif';
+      tempDiv.style.fontSize = '12px';
+      tempDiv.style.lineHeight = '1.6';
+      
+      // Build HTML content
+      tempDiv.innerHTML = `
+        <div style="margin-bottom: 20px;">
+          <h1 style="color: #1f2937; margin-bottom: 10px;">${note.title}</h1>
+          <div style="color: #6b7280; font-size: 11px;">
+            <p><strong>Source:</strong> ${note.source}</p>
+            <p><strong>GS Paper:</strong> ${note.gsPaper}</p>
+            <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h2 style="color: #4f46e5; font-size: 14px; margin-bottom: 10px;">Executive Summary</h2>
+          <div style="background-color: #fffbeb; padding: 10px; border-left: 4px solid #fbbf24;">
+            ${note.summary}
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h2 style="color: #4f46e5; font-size: 14px; margin-bottom: 10px;">Detailed Notes</h2>
+          <div>${note.content.split('\n').map(line => `<p>${line}</p>`).join('')}</div>
+        </div>
+        
+        ${note.mainsQuestion ? `
+        <div style="margin-bottom: 20px;">
+          <h2 style="color: #4f46e5; font-size: 14px; margin-bottom: 10px;">Mains Practice Question</h2>
+          <p style="font-style: italic; margin-bottom: 10px;"><strong>"${note.mainsQuestion.question}"</strong></p>
+          <h3 style="font-size: 12px; margin-bottom: 5px;">Structure Approach:</h3>
+          <ul style="margin-left: 20px;">
+            ${note.mainsQuestion.modelAnswerPoints.map(point => `<li>${point}</li>`).join('')}
+          </ul>
+        </div>
+        ` : ''}
+        
+        ${note.mcqs.length > 0 ? `
+        <div style="margin-bottom: 20px;">
+          <h2 style="color: #4f46e5; font-size: 14px; margin-bottom: 10px;">Prelims MCQs</h2>
+          ${note.mcqs.map((mcq, i) => `
+            <div style="margin-bottom: 15px; border: 1px solid #e5e7eb; padding: 10px; border-radius: 5px;">
+              <p style="margin-bottom: 8px;"><strong>Q${i + 1}. ${mcq.question}</strong></p>
+              <div style="margin-left: 10px; margin-bottom: 8px;">
+                ${mcq.options.map((opt, j) => `<p>(<strong>${String.fromCharCode(65 + j)}</strong>) ${opt}</p>`).join('')}
+              </div>
+              <p style="background-color: #f3f4f6; padding: 5px; border-radius: 3px;">
+                <strong>Answer:</strong> ${String.fromCharCode(65 + mcq.correctOption)}<br/>
+                <strong>Explanation:</strong> ${mcq.explanation}
+              </p>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+      `;
+      
+      document.body.appendChild(tempDiv);
+      
+      // Convert to canvas and then to PDF
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+      
+      // Calculate dimensions
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      let heightLeft = imgHeight;
+      let position = 0;
+      
+      // Add pages
+      const imgData = canvas.toDataURL('image/png');
+      while (heightLeft > 0) {
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= 297; // A4 height in mm
+        position -= 297;
+        if (heightLeft > 0) {
+          pdf.addPage();
+        }
+      }
+      
+      pdf.save(`${note.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+      
+      document.body.removeChild(tempDiv);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -51,13 +163,34 @@ export const NoteViewer: React.FC<Props> = ({ note, onSave, onClose, onDelete, s
           <h2 className="text-xl font-bold text-gray-900 leading-tight truncate">{note.title}</h2>
         </div>
         <div className="flex space-x-2 flex-shrink-0">
-           <button 
-              onClick={handleDownload}
-              className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-              title="Download Markdown"
+          {/* Download Dropdown */}
+          <div className="relative group">
+            <button 
+              className="p-2 rounded-full bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors flex items-center space-x-1"
+              title="Download Note"
             >
               <Download className="w-5 h-5" />
+              <span className="text-xs">▼</span>
             </button>
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              <button
+                onClick={handleDownloadPDF}
+                disabled={downloading}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 first:rounded-t-lg"
+              >
+                <FileText className="w-4 h-4" />
+                <span>{downloading ? 'Generating PDF...' : 'Download as PDF'}</span>
+              </button>
+              <button
+                onClick={handleDownloadMarkdown}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 last:rounded-b-lg"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Download as Markdown</span>
+              </button>
+            </div>
+          </div>
+          
           {onSave && (
             <button 
               onClick={onSave}
@@ -85,7 +218,7 @@ export const NoteViewer: React.FC<Props> = ({ note, onSave, onClose, onDelete, s
       </div>
 
       {/* Scrollable Content */}
-      <div className="overflow-y-auto p-6 space-y-8 custom-scrollbar">
+      <div ref={contentRef} className="overflow-y-auto p-6 space-y-8 custom-scrollbar">
         
         {/* Summary Section */}
         <section>
