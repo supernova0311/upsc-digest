@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { GoogleGenAI } from "@google/genai";
 
 interface Message {
@@ -12,6 +13,7 @@ interface Message {
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
 
 export const AIAssistant: React.FC = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -153,19 +155,11 @@ Remember: You are helping students prepare for one of the toughest exams in the 
     <>
       {/* Floating Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg transition-all duration-300 z-40 flex items-center justify-center ${
-          isOpen
-            ? 'bg-red-500 hover:bg-red-600'
-            : 'bg-indigo-600 hover:bg-indigo-700 animate-bounce'
-        }`}
-        title="UPSC Study Assistant"
+        onClick={() => navigate('/')}
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg transition-all duration-300 z-40 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 animate-bounce`}
+        title="Go to Home"
       >
-        {isOpen ? (
-          <X className="w-6 h-6 text-white" />
-        ) : (
-          <MessageCircle className="w-6 h-6 text-white" />
-        )}
+        <MessageCircle className="w-6 h-6 text-white" />
       </button>
 
       {/* Chat Window */}
