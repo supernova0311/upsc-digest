@@ -1,21 +1,38 @@
 <!DOCTYPE html>
+<!-- 
+  HTML ENTRY POINT FOR THE APPLICATION
+  This is the first file loaded by the browser when visiting http://localhost:3001
+  - Sets up the HTML structure
+  - Loads CSS (Tailwind via CDN)
+  - Loads fonts from Google Fonts
+  - Creates a root <div> where React will mount the entire app
+  - Imports the JavaScript entry point (index.jsx)
+-->
 <html lang="en">
   <head>
+    <!-- Specifies character encoding for proper text rendering -->
     <meta charset="UTF-8" />
+    <!-- Ensures the page is responsive on mobile devices -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Browser tab title -->
     <title>UPSC AI Scraper</title>
+    <!-- Load Tailwind CSS framework from CDN for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Tailwind typography plugin for better text formatting -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <style>
+      /* Import Inter font for main text and Merriweather for special styling */
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap');
       
+      /* Set default font for the entire page */
       body {
         font-family: 'Inter', sans-serif;
       }
+      /* Special serif font for emphasized content */
       .font-serif {
         font-family: 'Merriweather', serif;
       }
-      /* Custom scrollbar for better aesthetics */
+      /* Custom scrollbar styling to match the design theme */
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
       }
@@ -37,23 +54,22 @@
         scrollbar-width: none;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
-    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.10.1",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0"
-  }
-}
-</script>
+<!-- Link to additional CSS file for custom styles -->
 <link rel="stylesheet" href="/index.css">
 </head>
   <body>
+    <!-- 
+      ROOT ELEMENT: React will mount the entire application inside this div
+      - React will replace this empty div with all the app components
+      - This is where the <App /> component renders
+    -->
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
+    <!-- 
+      JAVASCRIPT ENTRY POINT: Loads and executes the React application
+      - type="module" allows ES6 import/export syntax
+      - src="/index.jsx" points to the main React component file
+      - This file initializes React and mounts the app to the #root div
+    -->
+  <script type="module" src="/index.jsx"></script>
 </body>
 </html>

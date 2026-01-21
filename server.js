@@ -1,32 +1,70 @@
 /**
- * UPSC AI Backend Server
+ * BACKEND SERVER - UPSC AI APPLICATION
  * 
- * Instructions to run:
- * 1. npm install express mongoose cors dotenv jsonwebtoken bcryptjs
- * 2. Create a .env file with MONGODB_URI and JWT_SECRET
- * 3. node server.js
+ * This is the Node.js/Express backend server that handles:
+ * 1. User authentication (login, register, JWT tokens)
+ * 2. Database operations (notes, articles storage)
+ * 3. API endpoints that the frontend calls
+ * 
+ * To run: node server.js
+ * Listens on http://localhost:5000
+ * 
+ * Stack:
+ * - Express.js: HTTP server framework
+ * - MongoDB: Database (with in-memory fallback)
+ * - JWT: Token-based authentication
+ * - CORS: Allow requests from frontend
  */
 
-import 'dotenv/config'; // Load environment variables from .env file
+// Load environment variables from .env file
+import 'dotenv/config';
+// Express framework for creating HTTP API
 import express from 'express';
+// MongoDB database driver
 import mongoose from 'mongoose';
+// Enable CORS so frontend can call backend
 import cors from 'cors';
+// JSON Web Tokens for secure authentication
 import jwt from 'jsonwebtoken';
+// Password hashing for security
 import bcrypt from 'bcryptjs';
 
+// Create Express app instance
 const app = express();
+// Middleware: Parse JSON request bodies
 app.use(express.json());
+// Middleware: Enable CORS (Cross-Origin Resource Sharing)
 app.use(cors());
 
-// --- Configuration ---
+// --- CONFIGURATION ---
+// Get port from environment or use default 5000
 const PORT = process.env.PORT || 5000;
+// Get MongoDB connection string from .env
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/upsc-ai';
+// Get JWT secret key from .env (used to sign tokens)
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
 
-// --- Database Connection ---
+// --- DATABASE CONNECTION ---
+// Try to connect to MongoDB
+let dbConnected = false; // Track if database connection is successful
+
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+  .then(() => {
+    console.log('✅ Connected to MongoDB');
+    dbConnected = true;
+  })
+  .catch(err => {
+    // If MongoDB connection fails, use in-memory storage instead
+    console.warn('⚠️ MongoDB Connection Error - using memory storage fallback:', err.message);
+    dbConnected = false;
+  });
+
+// In-memory storage fallback (if MongoDB is not available)
+const memoryStorage = {
+  users: [],
+  notes: [],
+  articles: []
+};
 
 // --- Models ---
 const UserSchema = new mongoose.Schema({
@@ -153,9 +191,14 @@ app.delete('/api/notes/:id', authMiddleware, async (req, res) => {
 // --- Routes: Articles (History) ---
 app.get('/api/articles', authMiddleware, async (req, res) => {
   try {
-    // Return last 50 scraped articles for this user
-    const articles = await Article.find({ userId: req.user._id }).sort({ scrapedAt: -1 }).limit(50);
-    res.json(articles);
+    if (dbConnected) {
+      const articles = await Article.find({ userId: req.user._id }).sort({ scrapedAt: -1 }).limit(50);
+      res.json(articles);
+    } else {
+      // Return from memory storage
+      const articles = memoryStorage.articles.filter(a => a.userId === req.user._id).slice(0, 50);
+      res.json(articles);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -163,20 +206,26 @@ app.get('/api/articles', authMiddleware, async (req, res) => {
 
 app.post('/api/articles', authMiddleware, async (req, res) => {
   try {
-    // Prevent exact duplicates for the same user
-    const existing = await Article.findOne({ userId: req.user._id, title: req.body.title });
-    if (existing) return res.json(existing);
+    if (dbConnected) {
+      const existing = await Article.findOne({ userId: req.user._id, title: req.body.title });
+      if (existing) return res.status(400).json({ error: 'Article already saved' });
 
-    const article = new Article({ ...req.body, userId: req.user._id });
-    await article.save();
-    res.json(article);
+      const article = new Article({ ...req.body, userId: req.user._id });
+      await article.save();
+      res.json(article);
+    } else {
+      // Use memory storage fallback
+      const article = { ...req.body, userId: req.user._id, _id: Date.now().toString(), createdAt: new Date() };
+      memoryStorage.articles.push(article);
+      res.json(article);
+    }
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
+    res.json({ status: 'ok', database: dbConnected ? 'connected' : 'disconnected' });
 });
 
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

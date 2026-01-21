@@ -1,14 +1,7 @@
 import React from 'react';
-import { NewsArticle } from '../types';
 import { ArrowRight, Clock, Link as LinkIcon } from 'lucide-react';
 
-interface Props {
-  article: NewsArticle;
-  onAnalyze: (article: NewsArticle) => void;
-  isAnalyzing: boolean;
-}
-
-export const ArticleCard: React.FC<Props> = ({ article, onAnalyze, isAnalyzing }) => {
+export const ArticleCard = ({ article, onAnalyze, isAnalyzing }) => {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start mb-2">

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Search, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { fetchNewsViaAI, generateNoteFromContent } from '../services/geminiService';
 import { db } from '../services/dbService';
-import { NewsArticle, GeneratedNote, ProcessingStatus } from '../types';
 import { ArticleCard } from '../components/ArticleCard';
 import { NoteViewer } from '../components/NoteViewer';
 
@@ -18,13 +17,13 @@ const SOURCES = [
   { id: 'dte', name: 'Down To Earth', topic: 'environment, ecology, climate change, and agriculture' }
 ];
 
-export const NewsScraper: React.FC = () => {
+export const NewsScraper = () => {
   const [selectedSource, setSelectedSource] = useState(SOURCES[0]);
-  const [status, setStatus] = useState<ProcessingStatus>('idle');
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [generatedNote, setGeneratedNote] = useState<GeneratedNote | null>(null);
+  const [status, setStatus] = useState('idle');
+  const [articles, setArticles] = useState([]);
+  const [generatedNote, setGeneratedNote] = useState(null);
   const [error, setError] = useState('');
-  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+  const [analyzingId, setAnalyzingId] = useState(null);
 
   const handleScrape = async () => {
     setStatus('searching');
@@ -35,17 +34,16 @@ export const NewsScraper: React.FC = () => {
     try {
       const results = await fetchNewsViaAI(selectedSource.name, selectedSource.topic);
       setArticles(results);
-      // Save articles to history (simulating DB)
       results.forEach(a => db.saveArticle(a));
       setStatus('success');
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setError(err.message || 'Failed to fetch news. Please try again.');
       setStatus('error');
     }
   };
 
-  const handleAnalyze = async (article: NewsArticle) => {
+  const handleAnalyze = async (article) => {
     setAnalyzingId(article.id);
     try {
       const noteData = await generateNoteFromContent(
@@ -53,15 +51,15 @@ export const NewsScraper: React.FC = () => {
         article.source
       );
       
-      const fullNote: GeneratedNote = {
+      const fullNote = {
         ...noteData,
-        _id: '', // Will be assigned by DB
+        _id: '',
         articleId: article.id,
         createdAt: new Date().toISOString()
       };
       
       setGeneratedNote(fullNote);
-    } catch (err: any) {
+    } catch (err) {
       setError('Analysis failed. Try again.');
     } finally {
       setAnalyzingId(null);

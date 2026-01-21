@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { BookOpen, Loader2, AlertCircle } from 'lucide-react';
 
-export const Login: React.FC = () => {
+export const Login = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -15,7 +15,7 @@ export const Login: React.FC = () => {
     password: ''
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -27,7 +27,7 @@ export const Login: React.FC = () => {
         await authService.register(formData.name, formData.email, formData.password);
       }
       navigate('/');
-    } catch (err: any) {
+    } catch (err) {
       setError(err.message || 'Authentication failed');
     } finally {
       setLoading(false);

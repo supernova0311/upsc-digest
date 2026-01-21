@@ -1,14 +1,12 @@
-import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { GeneratedNote, MCQ, MainsQuestion, NewsArticle } from '../types';
+import { GoogleGenAI } from "@google/genai";
 
-// Ensure API key is present
-const apiKey = process.env.GEMINI_API_KEY || '';
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
-export const fetchNewsViaAI = async (source: string, topic: string): Promise<NewsArticle[]> => {
+export const fetchNewsViaAI = async (source, topic) => {
   if (!apiKey) throw new Error("API Key missing");
 
-  const model = "gemini-2.5-flash"; // Fast model for search
+  const model = "gemini-2.5-flash";
   const prompt = `Find the latest top 5 news headlines and brief summaries from ${source} related to ${topic} (UPSC relevant). 
   Focus on policy, economy, environment, or international relations. 
   
@@ -22,14 +20,11 @@ export const fetchNewsViaAI = async (source: string, topic: string): Promise<New
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        // responseMimeType and responseSchema are NOT supported when using tools like googleSearch
-        // We must parse the text manually
       }
     });
 
     let jsonStr = response.text || "[]";
     
-    // Clean up potential markdown formatting if the model disregards "raw JSON" instruction
     jsonStr = jsonStr.replace(/```json/g, '').replace(/```/g, '').trim();
     
     let data;
@@ -37,7 +32,6 @@ export const fetchNewsViaAI = async (source: string, topic: string): Promise<New
         data = JSON.parse(jsonStr);
     } catch (e) {
         console.warn("Initial JSON parse failed, attempting to extract array:", e);
-        // Fallback: try to find array brackets if there is extra text
         const match = jsonStr.match(/\[.*\]/s);
         if (match) {
             try {
@@ -53,7 +47,7 @@ export const fetchNewsViaAI = async (source: string, topic: string): Promise<New
     
     if (!Array.isArray(data)) data = [];
     
-    return data.map((item: any) => ({
+    return data.map((item) => ({
       id: crypto.randomUUID(),
       title: item.title || "No Title",
       source: source,
@@ -69,7 +63,7 @@ export const fetchNewsViaAI = async (source: string, topic: string): Promise<New
   }
 };
 
-export const generateNoteFromContent = async (text: string, sourceName: string): Promise<Omit<GeneratedNote, '_id' | 'createdAt'>> => {
+export const generateNoteFromContent = async (text, sourceName) => {
   if (!apiKey) throw new Error("API Key missing");
 
   const model = "gemini-2.5-flash"; 
@@ -85,60 +79,48 @@ export const generateNoteFromContent = async (text: string, sourceName: string):
   4. Create 3 high-quality Prelims MCQs with explanations.
   5. Formulate 1 Mains descriptive question and provide a model answer structure.
   
-  Output purely in JSON format conforming to the specified schema.`;
-
-  const noteSchema: Schema = {
-    type: Type.OBJECT,
-    properties: {
-      title: { type: Type.STRING },
-      gsPaper: { type: Type.STRING, enum: ["GS1", "GS2", "GS3", "GS4"] },
-      tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-      summary: { type: Type.STRING },
-      content: { type: Type.STRING, description: "Detailed notes in Markdown format" },
-      mcqs: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            question: { type: Type.STRING },
-            options: { type: Type.ARRAY, items: { type: Type.STRING } },
-            correctOption: { type: Type.INTEGER },
-            explanation: { type: Type.STRING }
-          }
-        }
-      },
-      mainsQuestion: {
-        type: Type.OBJECT,
-        properties: {
-          question: { type: Type.STRING },
-          modelAnswerPoints: { type: Type.ARRAY, items: { type: Type.STRING } }
-        }
+  Output as valid JSON with this structure:
+  {
+    "title": "string",
+    "gsPaper": "GS1|GS2|GS3|GS4",
+    "tags": ["string"],
+    "summary": "string",
+    "content": "string (markdown)",
+    "mcqs": [
+      {
+        "question": "string",
+        "options": ["string"],
+        "correctOption": 0,
+        "explanation": "string"
       }
+    ],
+    "mainsQuestion": {
+      "question": "string",
+      "modelAnswerPoints": ["string"]
     }
-  };
+  }`;
 
   try {
     const response = await ai.models.generateContent({
       model,
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: noteSchema,
-        thinkingConfig: { thinkingBudget: 0 } // Disable thinking for speed on flash model
-      }
+      contents: prompt
     });
 
-    const result = JSON.parse(response.text || "{}");
+    let jsonText = response.text || "{}";
+    // Remove markdown code blocks if present
+    jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    
+    const result = JSON.parse(jsonText);
     
     return {
       title: result.title || "Untitled Note",
       source: sourceName,
-      gsPaper: result.gsPaper as any,
+      gsPaper: result.gsPaper || "GS2",
       tags: result.tags || [],
       summary: result.summary || "",
       content: result.content || "",
       mcqs: result.mcqs || [],
-      mainsQuestion: result.mainsQuestion
+      mainsQuestion: result.mainsQuestion || { question: "", modelAnswerPoints: [] }
     };
 
   } catch (error) {
@@ -147,7 +129,7 @@ export const generateNoteFromContent = async (text: string, sourceName: string):
   }
 };
 
-export const generateDailyDigest = async (articles: NewsArticle[]): Promise<string> => {
+export const generateDailyDigest = async (articles) => {
   if (!apiKey) throw new Error("API Key missing");
   const model = "gemini-2.5-flash"; 
   

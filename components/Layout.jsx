@@ -3,11 +3,11 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Newspaper, FileText, Settings, BookOpen, Database, LogOut, User } from 'lucide-react';
 import { authService } from '../services/authService';
 
-export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const Layout = ({ children }) => {
   const navigate = useNavigate();
   const { user } = authService.getStoredAuth();
   
-  const navClass = ({ isActive }: { isActive: boolean }) =>
+  const navClass = ({ isActive }) =>
     `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
       isActive ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
     }`;

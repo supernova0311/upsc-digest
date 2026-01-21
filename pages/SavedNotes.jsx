@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../services/dbService';
-import { GeneratedNote } from '../types';
 import { NoteViewer } from '../components/NoteViewer';
 import { Search, Filter, Trash2, Eye } from 'lucide-react';
 
-export const SavedNotes: React.FC = () => {
-  const [notes, setNotes] = useState<GeneratedNote[]>([]);
-  const [selectedNote, setSelectedNote] = useState<GeneratedNote | null>(null);
+export const SavedNotes = () => {
+  const [notes, setNotes] = useState([]);
+  const [selectedNote, setSelectedNote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
@@ -21,7 +20,7 @@ export const SavedNotes: React.FC = () => {
     setLoading(false);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id) => {
     if (confirm('Are you sure you want to delete this note?')) {
       await db.deleteNote(id);
       setNotes(prev => prev.filter(n => n._id !== id));

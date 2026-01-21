@@ -1,19 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { db } from '../services/dbService';
-import { GeneratedNote, NewsArticle } from '../types';
 import { Link } from 'react-router-dom';
 import { Newspaper, BookOpen, ArrowUpRight, Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import { generateDailyDigest } from '../services/geminiService';
 import ReactMarkdown from 'react-markdown';
 
-export const Dashboard: React.FC = () => {
-  const [notes, setNotes] = useState<GeneratedNote[]>([]);
+export const Dashboard = () => {
+  const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Digest State
-  const [digest, setDigest] = useState<string | null>(null);
+  const [digest, setDigest] = useState(null);
   const [generatingDigest, setGeneratingDigest] = useState(false);
-  const [recentArticles, setRecentArticles] = useState<NewsArticle[]>([]);
+  const [recentArticles, setRecentArticles] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -31,7 +29,6 @@ export const Dashboard: React.FC = () => {
     if (recentArticles.length === 0) return;
     setGeneratingDigest(true);
     try {
-        // Synthesize top 15 most recent articles
         const text = await generateDailyDigest(recentArticles.slice(0, 15));
         setDigest(text);
     } catch (e) {

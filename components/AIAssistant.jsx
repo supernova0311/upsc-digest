@@ -3,19 +3,12 @@ import { MessageCircle, X, Send, Loader2, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { GoogleGenAI } from "@google/genai";
 
-interface Message {
-  id: string;
-  text: string;
-  sender: 'user' | 'bot';
-  timestamp: Date;
-}
-
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '';
 
-export const AIAssistant: React.FC = () => {
+export const AIAssistant = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState([
     {
       id: '1',
       text: 'Hello! 👋 I\'m your UPSC Study Assistant. I\'m here to help you understand conceptual topics for your Civil Services preparation. Ask me anything about history, geography, economics, polity, or any GS subject!',
@@ -26,8 +19,8 @@ export const AIAssistant: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -68,8 +61,7 @@ Remember: You are helping students prepare for one of the toughest exams in the 
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
-    // Add user message
-    const userMessage: Message = {
+    const userMessage = {
       id: Date.now().toString(),
       text: input,
       sender: 'user',
@@ -88,13 +80,11 @@ Remember: You are helping students prepare for one of the toughest exams in the 
 
       const ai = new GoogleGenAI({ apiKey });
       
-      // Build conversation context
       const conversationHistory = messages.map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'model',
         parts: [{ text: msg.text }]
       }));
 
-      // Add current user message
       conversationHistory.push({
         role: 'user',
         parts: [{ text: input }]
@@ -108,7 +98,7 @@ Remember: You are helping students prepare for one of the toughest exams in the 
 
       const botResponse = response.text || 'I apologize, but I couldn\'t generate a response. Please try again.';
 
-      const botMessage: Message = {
+      const botMessage = {
         id: (Date.now() + 1).toString(),
         text: botResponse,
         sender: 'bot',
@@ -116,11 +106,11 @@ Remember: You are helping students prepare for one of the toughest exams in the 
       };
 
       setMessages(prev => [...prev, botMessage]);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error:', err);
       setError(err.message || 'Failed to get response. Please try again.');
       
-      const errorMessage: Message = {
+      const errorMessage = {
         id: (Date.now() + 1).toString(),
         text: `Sorry, I encountered an error: ${err.message || 'Unknown error'}. Please check if your API key is configured correctly.`,
         sender: 'bot',
@@ -132,7 +122,7 @@ Remember: You are helping students prepare for one of the toughest exams in the 
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -155,9 +145,9 @@ Remember: You are helping students prepare for one of the toughest exams in the 
     <>
       {/* Floating Button */}
       <button
-        onClick={() => navigate('/')}
+        onClick={() => setIsOpen(!isOpen)}
         className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg transition-all duration-300 z-40 flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 animate-bounce`}
-        title="Go to Home"
+        title="Open Chat Assistant"
       >
         <MessageCircle className="w-6 h-6 text-white" />
       </button>

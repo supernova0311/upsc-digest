@@ -1,20 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { GeneratedNote } from '../types';
 import ReactMarkdown from 'react-markdown';
 import { CheckCircle, Book, HelpCircle, Save, Trash2, X, Download, FileText } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-interface Props {
-  note: GeneratedNote;
-  onSave?: () => void;
-  onClose?: () => void;
-  onDelete?: () => void;
-  saved?: boolean;
-}
-
-export const NoteViewer: React.FC<Props> = ({ note, onSave, onClose, onDelete, saved }) => {
-  const contentRef = useRef<HTMLDivElement>(null);
+export const NoteViewer = ({ note, onSave, onClose, onDelete, saved }) => {
+  const contentRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
 
   const handleDownloadMarkdown = () => {
@@ -41,18 +32,16 @@ export const NoteViewer: React.FC<Props> = ({ note, onSave, onClose, onDelete, s
     try {
       if (!contentRef.current) return;
       
-      // Create a temporary container for PDF content
       const tempDiv = document.createElement('div');
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '-9999px';
-      tempDiv.style.width = '210mm'; // A4 width
+      tempDiv.style.width = '210mm';
       tempDiv.style.backgroundColor = 'white';
       tempDiv.style.padding = '20px';
       tempDiv.style.fontFamily = 'Arial, sans-serif';
       tempDiv.style.fontSize = '12px';
       tempDiv.style.lineHeight = '1.6';
       
-      // Build HTML content
       tempDiv.innerHTML = `
         <div style="margin-bottom: 20px;">
           <h1 style="color: #1f2937; margin-bottom: 10px;">${note.title}</h1>
@@ -107,26 +96,23 @@ export const NoteViewer: React.FC<Props> = ({ note, onSave, onClose, onDelete, s
       
       document.body.appendChild(tempDiv);
       
-      // Convert to canvas and then to PDF
       const canvas = await html2canvas(tempDiv, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff'
       });
       
-      // Calculate dimensions
-      const imgWidth = 210; // A4 width in mm
+      const imgWidth = 210;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       const pdf = new jsPDF('p', 'mm', 'a4');
       
       let heightLeft = imgHeight;
       let position = 0;
       
-      // Add pages
       const imgData = canvas.toDataURL('image/png');
       while (heightLeft > 0) {
         pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= 297; // A4 height in mm
+        heightLeft -= 297;
         position -= 297;
         if (heightLeft > 0) {
           pdf.addPage();
